@@ -8,11 +8,20 @@ import json
 import base64
 import hashlib
 
+from unidecode import unidecode
 from social.utils import parse_qs, constant_time_compare, handle_http_errors
 from social.backends.oauth import BaseOAuth2
 from social.exceptions import AuthException, AuthCanceled, AuthUnknownError, \
                               AuthMissingParameter
 
+
+def transliterateText(text):
+    import string
+    import re
+
+    text = unidecode(text)
+    allow = string.letters + string.digits
+    return re.sub('[^%s]' % allow, '', text).lower()
 
 class FacebookOAuth2(BaseOAuth2):
     """Facebook OAuth2 authentication backend"""
@@ -36,8 +45,13 @@ class FacebookOAuth2(BaseOAuth2):
             response.get('first_name', ''),
             response.get('last_name', '')
         )
-        return {'username': response.get('username', response.get('name')),
-                'email': response.get('email', ''),
+
+        fullname = unidecode(fullname)
+        username = transliterateText(response.get('username', response.get('name')))
+        email = response.get('email', username + '@localhost.com')
+
+        return {'username': username,
+                'email': email,
                 'fullname': fullname,
                 'first_name': first_name,
                 'last_name': last_name}
